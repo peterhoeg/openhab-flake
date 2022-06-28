@@ -9,10 +9,12 @@
   outputs = { self, flake-utils, nixpkgs }:
     let
       system = "x86_64-linux";
+
       pkgs = import nixpkgs {
         inherit system;
         overlays = [ self.outputs.overlays.default ];
       };
+
       lib = nixpkgs.lib.extend (final: prev: import ./lib);
     in
     {
