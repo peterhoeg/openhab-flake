@@ -15,7 +15,7 @@
         overlays = [ self.outputs.overlays.default ];
       };
 
-      lib = nixpkgs.lib.extend (final: prev: import ./lib);
+      lib = nixpkgs.lib.extend (final: prev: { openhab = import ./lib; });
     in
     {
       overlays.default = final: prev: {
