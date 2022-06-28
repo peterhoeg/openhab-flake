@@ -118,13 +118,13 @@ rec {
   };
 
   openhab33 = generic {
-    version = "3.3.0.M6";
-    hash = "sha256-rErYWYoL1Fbb3HNgMQgpbieqMgrDE/A9qgrTwfFGftc=";
+    version = "3.3.0";
+    hash = "sha256-nq8Jjfu3nxAsnKgxNVlCJNGbozrDEZTvJ4ERYgRDeGs=";
   };
 
   openhab33-addons = addon {
     pname = "openhab-addons";
-    hash = "sha256-7PDI8U8dpVGZ8o0T7VVRAT3et1GQO3kPA0bEmcJI+s0=";
+    hash = "sha256-tUH5+/0XrNsK4AZPdTphTLGowK7NJW0aX3rBCPfssD4=";
     inherit (openhab33) version;
   };
 
