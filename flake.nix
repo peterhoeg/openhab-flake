@@ -22,7 +22,7 @@
           enabled = 1;
           type = 1;
           hidden = false;
-          description = "Local pkgs";
+          description = "openHAB flake";
           checkinterval = 600;
           schedulingshares = 1;
           enableemail = false;
