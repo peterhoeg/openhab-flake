@@ -1,0 +1,14 @@
+{
+  "main": {
+    "checkinterval": 600,
+    "description": "Local pkgs",
+    "emailoverride": "",
+    "enabled": 1,
+    "enableemail": false,
+    "flake": "gitlab:peterhoeg/openhab-flake?ref=main",
+    "hidden": false,
+    "keepnr": 3,
+    "schedulingshares": 1,
+    "type": 1
+  }
+}
