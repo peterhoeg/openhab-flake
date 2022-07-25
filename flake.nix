@@ -16,7 +16,23 @@
       };
 
       lib = nixpkgs.lib.extend (final: prev: { openhab = import ./lib; });
+
+      specFile = (pkgs.formats.json { }).generate "spec.json" {
+        main = {
+          enabled = 1;
+          type = 1;
+          hidden = false;
+          description = "Local pkgs";
+          checkinterval = 600;
+          schedulingshares = 1;
+          enableemail = false;
+          emailoverride = "";
+          keepnr = 3;
+          flake = "gitlab:peterhoeg/openhab-flake?ref=main";
+        };
+      };
     in
+
     {
       overlays.default = final: prev: {
         openhab = {
@@ -32,5 +48,14 @@
       nixosModules.openhab = import ./modules/default.nix;
     } // flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (system: {
       packages = pkgs.openhab // { default = pkgs.openhab.openhab-stable; };
+
+      devShells.default = pkgs.mkShell {
+        nativeBuildInputs = [ ];
+        shellHook = ''
+          install -Dm644 ${specFile} ./.hydra/${specFile.name}
+        '';
+      };
+
+      hydraJobs = pkgs.openhab;
     });
 }
