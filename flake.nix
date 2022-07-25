@@ -10,6 +10,8 @@
     let
       system = "x86_64-linux";
 
+      supportedSystems = [ system ]; # [ "x86_64-linux" "aarch64-linux" ]
+
       pkgs = import nixpkgs {
         inherit system;
         overlays = [ self.outputs.overlays.default ];
@@ -46,7 +48,7 @@
       };
 
       nixosModules.openhab = import ./modules/default.nix;
-    } // flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (system: {
+    } // flake-utils.lib.eachSystem supportedSystems (system: {
       packages = pkgs.openhab // { default = pkgs.openhab.openhab-stable; };
 
       devShells.default = pkgs.mkShell {
