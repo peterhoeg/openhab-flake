@@ -12,6 +12,7 @@ let
       "https://openhab.jfrog.io/artifactory/libs-release-local/${path}"
       "https://openhab.jfrog.io/artifactory/libs-milestone-local/${path}"
       "https://bintray.com/openhab/mvn/download_file?file_path=${path}"
+      "https://repo1.maven.org/maven2/${path}"
     ];
 
   addon = { pname, version, hash }:
