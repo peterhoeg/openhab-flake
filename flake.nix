@@ -19,7 +19,7 @@
 
       lib = nixpkgs.lib.extend (final: prev: { openhab = import ./lib; });
 
-      specFile = (pkgs.formats.json { }).generate "spec.json" {
+      specFile = (pkgs.formats.json { }).generate "hydra.json" {
         main = {
           enabled = 1;
           type = 1;
@@ -54,7 +54,7 @@
       devShells.default = pkgs.mkShell {
         nativeBuildInputs = [ ];
         shellHook = ''
-          install -Dm644 ${specFile} ./.hydra/${specFile.name}
+          install -Dm644 ${specFile} ./.ci/${specFile.name}
         '';
       };
 

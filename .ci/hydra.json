@@ -1,7 +1,7 @@
 {
   "main": {
     "checkinterval": 600,
-    "description": "Local pkgs",
+    "description": "openHAB flake",
     "emailoverride": "",
     "enabled": 1,
     "enableemail": false,
