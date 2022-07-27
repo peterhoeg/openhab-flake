@@ -26,7 +26,6 @@ let
 
       buildCommand = ''
         install -Dm444 $src $out/share/openhab/addons/${src.name}
-
       '';
     };
 
