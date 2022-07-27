@@ -129,6 +129,6 @@ rec {
     inherit (openhab33) version;
   };
 
-  openhab-stable = openhab32;
-  openhab-stable-addons = openhab32-addons;
+  openhab-stable = openhab33;
+  openhab-stable-addons = openhab33-addons;
 }
