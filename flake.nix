@@ -54,7 +54,7 @@
       devShells.default = pkgs.mkShell {
         nativeBuildInputs = [ ];
         shellHook = ''
-          install -Dm644 ${specFile} ./.ci/${specFile.name}
+          install -Dm644 ${specFile} $(git rev-parse --show-toplevel)/.ci/${specFile.name}
         '';
       };
 
