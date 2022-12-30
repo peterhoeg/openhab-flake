@@ -1,6 +1,13 @@
 { stdenv
 , lib
+, fetchFromGitHub
 , fetchurl
+, nodejs
+, buildNpmPackage
+, makeWrapper
+, nix-update-script
+, python3
+, cloudHomeDir ? "/var/lib/openhabcloud"
 }:
 
 let
@@ -77,6 +84,52 @@ let
 
 in
 rec {
+  openhab-cloud = buildNpmPackage rec {
+    pname = "openhab-cloud";
+    version = "1.0.16";
+
+    src = fetchFromGitHub {
+      owner = "openhab";
+      repo = pname;
+      rev = "v" + version;
+      hash = "sha256-Oe7U0h0ym9KYOtqJTKA35nnqZob+iL8J7UcJV2K7YRQ=";
+    };
+
+    postPatch = ''
+      find . -name '*.js' -exec \
+        sed -i -e "s@require('./config.json')@require('${cloudHomeDir}/config.json')@" {} \;
+    '';
+
+    npmDepsHash = "sha256-FIxbwN4Pw9E1thzr8ADi3fhEnlon+Ol7TIBFlQpgcCo=";
+
+    nativeBuildInputs = [ makeWrapper python3 ];
+
+    dontNpmBuild = true;
+
+    postInstall = ''
+      mkdir -p $out/bin
+
+      makeWrapper ${lib.getExe nodejs} $out/bin/openhabcloud \
+        --argv0 openhabcloud \
+        --chdir ${cloudHomeDir} \
+        --set NODE_PATH "$out/lib/node_modules" \
+        --add-flags $out/lib/node_modules/openhabcloud/app.js
+    '';
+
+    passthru = {
+      homeDir = cloudHomeDir;
+      updateScript = nix-update-script { };
+    };
+
+    meta = with lib; {
+      description = "openHAB cloud component";
+      homepage = "https://openhab.org";
+      license = licenses.epl10;
+      maintainers = with maintainers; [ peterhoeg ];
+      platforms = platforms.unix;
+    };
+  };
+
   openhab2 = generic {
     version = "2.5.12";
     hash = "sha256-JOinHmvCIwOAAWOHHRwFVIQ/oZ6c1zbmvnIaoHmLvjo=";

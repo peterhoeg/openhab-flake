@@ -39,6 +39,7 @@
       overlays.default = final: prev: {
         openhab = {
           inherit (prev.callPackages ./packages.nix { })
+            openhab-cloud
             openhab2 openhab2-v1-addons openhab2-v2-addons
             openhab31 openhab31-addons
             openhab32 openhab32-addons
