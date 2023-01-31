@@ -1,12 +1,14 @@
 { stdenv
 , lib
 , fetchFromGitHub
+, fetchFromGitLab
 , fetchurl
 , nodejs
 , buildNpmPackage
 , makeWrapper
 , nix-update-script
 , python3
+, crystal
 , cloudHomeDir ? "/var/lib/openhabcloud"
 }:
 
@@ -195,4 +197,36 @@ rec {
 
   openhab-stable = openhab34;
   openhab-stable-addons = openhab34-addons;
+
+  openhab-heartbeat = crystal.buildCrystalPackage rec {
+    pname = "openhab-heartbeat";
+    version = "0.1.0";
+
+    format = "shards";
+    shardsFile = ./shards.nix;
+
+    src = fetchFromGitLab {
+      owner = "peterhoeg";
+      repo = "openhab-heartbeat";
+      rev = "v" + version;
+      hash = "sha256-111zT/SnO16jfUfYYiT4MOGnlgrw0jWTNL37u1Y5oBI=";
+    };
+
+    buildInputs = [ openssl zlib ];
+
+    nativeBuildInputs = [ ];
+
+    doCheck = false;
+
+    postFixup = ''
+      strip $out/bin/*
+    '';
+
+    meta = with lib; {
+      description = "openHAB Cloud Connector heartbeat";
+      license = licenses.gpl3Only;
+      maintainers = with maintainers; [ peterhoeg ];
+      mainProgram = "heartbeat";
+    };
+  };
 }
