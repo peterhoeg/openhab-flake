@@ -9,6 +9,8 @@
 , nix-update-script
 , python3
 , crystal
+, openssl
+, zlib
 , cloudHomeDir ? "/var/lib/openhabcloud"
 }:
 
@@ -200,7 +202,7 @@ rec {
 
   openhab-heartbeat = crystal.buildCrystalPackage rec {
     pname = "openhab-heartbeat";
-    version = "0.1.0";
+    version = "0.1.1";
 
     format = "shards";
     shardsFile = ./shards.nix;
@@ -209,7 +211,7 @@ rec {
       owner = "peterhoeg";
       repo = "openhab-heartbeat";
       rev = "v" + version;
-      hash = "sha256-111zT/SnO16jfUfYYiT4MOGnlgrw0jWTNL37u1Y5oBI=";
+      hash = "sha256-9EMXl1OlgxPuZMjABjZ2bND1uzlYo9gpfPrNgfw/RYg=";
     };
 
     buildInputs = [ openssl zlib ];
