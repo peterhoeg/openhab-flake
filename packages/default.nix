@@ -5,7 +5,6 @@
 , fetchurl
 , nodejs
 , buildNpmPackage
-, maven
 , makeWrapper
 , nix-update-script
 , python3
@@ -75,86 +74,6 @@ let
 
         mkdir -p $out/share/openhab
         cp -r * $out/share/openhab/
-
-        runHook postInstall
-      '';
-
-      meta = with lib; {
-        description = "OpenHAB - vendor and technology agnostic open source home automation software";
-        homepage = "https://www.openhab.org";
-        license = licenses.epl10;
-        maintainers = with maintainers; [ peterhoeg ];
-      };
-    };
-
-  fromSource = { pname, version, hash, repoName, repoHash }:
-    let
-      repo = stdenv.mkDerivation {
-        name = "${pname}-${version}-dependencies";
-        inherit version;
-
-        src = fetchFromGitHub {
-          owner = "openhab";
-          repo = repoName;
-          rev = version;
-          hash = repoHash;
-        };
-
-        nativeBuildInputs = [ maven ];
-
-        buildPhase = ''
-          mvn package \
-            -Dmaven.repo.local=$out \
-            -Dspotless.check.skip=true
-        '';
-
-        # keep only *.{pom,jar,sha1,nbm} and delete all ephemeral files with lastModified
-        # timestamps inside
-        installPhase = ''
-          find $out -type f \
-            -name \*.lastUpdated -or \
-            -name resolver-status.properties -or \
-            -name _remote.repositories \
-            -delete
-        '';
-
-        # don't do any fixup
-        dontFixup = true;
-        outputHashAlgo = "sha256";
-        outputHashMode = "recursive";
-        outputHash = hash;
-      };
-
-      mavenArgs = lib.concatStringsSep " " [
-        "-X"
-        "--offline"
-        "-Dmaven.repo.local=${repo}"
-        # "clean"
-        "install"
-        "-DskipChecks"
-        "-DskipTests"
-      ];
-
-    in
-    stdenv.mkDerivation rec {
-      inherit pname version;
-      inherit (repo) src nativeBuildInputs;
-
-      buildPhase = ''
-        runHook preBuild
-
-        echo "Using repository ${repo}"
-        MAVEN_OPTS="-Xms512m -Xmx1024m" mvn ${mavenArgs}
-
-        runHook postBuild
-      '';
-
-      installPhase = ''
-        runHook preInstall
-
-        # install -Dm644 target/${pname}-${version}.jar $out/share/java
-        mkdir -p $out
-        cp -r * $out
 
         runHook postInstall
       '';
@@ -267,31 +186,15 @@ rec {
     inherit (openhab33) version;
   };
 
-  # openhab34 = generic {
-  #   version = "3.4.2";
-  #   hash = "sha256-VRRRKS6tnKRAsNIk1g1/aGKfmUnc7Ih07/p5kWUOMd8=";
-  # };
-
-  openhab34 = fromSource {
-    pname = "openhab";
+  openhab34 = generic {
     version = "3.4.2";
-    hash = lib.fakeSha256;
-    repoName = "openhab-core";
-    repoHash = "sha256-XGJlCfxK6XtnHuYA4RA8NbJUbjwASQbunjfVabW+wCg=";
+    hash = "sha256-VRRRKS6tnKRAsNIk1g1/aGKfmUnc7Ih07/p5kWUOMd8=";
   };
 
-  # openhab34-addons = addon {
-  #   pname = "openhab-addons";
-  #   hash = "sha256-cwuWuKz4T0TtnfRs1Y8b0uav07SYq+YveW2gdMqTJZQ=";
-  #   inherit (openhab34) version;
-  # };
-
-  openhab34-addons = fromSource {
+  openhab34-addons = addon {
     pname = "openhab-addons";
-    version = "3.4.2";
-    hash = lib.fakeSha256;
-    repoName = "openhab-addons";
-    repoHash = lib.fakeSha256;
+    hash = "sha256-cwuWuKz4T0TtnfRs1Y8b0uav07SYq+YveW2gdMqTJZQ=";
+    inherit (openhab34) version;
   };
 
   openhab-stable = openhab34;
