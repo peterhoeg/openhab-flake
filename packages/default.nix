@@ -187,13 +187,13 @@ rec {
   };
 
   openhab34 = generic {
-    version = "3.4.2";
-    hash = "sha256-VRRRKS6tnKRAsNIk1g1/aGKfmUnc7Ih07/p5kWUOMd8=";
+    version = "3.4.3";
+    hash = "sha256-tmXF1Obw8zgpV5zXy8/sA7QbjlXmIOWNPdBB+mxOXVc=";
   };
 
   openhab34-addons = addon {
     pname = "openhab-addons";
-    hash = "sha256-cwuWuKz4T0TtnfRs1Y8b0uav07SYq+YveW2gdMqTJZQ=";
+    hash = "sha256-qSjpU0XF3Adkb4zyOIOlVF+se+arAZ/33TlJsJGO6J0=";
     inherit (openhab34) version;
   };
 
@@ -215,8 +215,6 @@ rec {
     };
 
     buildInputs = [ openssl zlib ];
-
-    nativeBuildInputs = [ ];
 
     doCheck = false;
 
