@@ -187,13 +187,13 @@ rec {
   };
 
   openhab34 = generic {
-    version = "3.4.3";
-    hash = "sha256-tmXF1Obw8zgpV5zXy8/sA7QbjlXmIOWNPdBB+mxOXVc=";
+    version = "3.4.4";
+    hash = "sha256-RQCgABQcNu7mhwLQrZLzOSyb13q91zpZO6LcZD9D8Bc=";
   };
 
   openhab34-addons = addon {
     pname = "openhab-addons";
-    hash = "sha256-qSjpU0XF3Adkb4zyOIOlVF+se+arAZ/33TlJsJGO6J0=";
+    hash = "sha256-hSZx4T+jUXCUfknPens0I7QimAfITx4m1oH079E46No=";
     inherit (openhab34) version;
   };
 
