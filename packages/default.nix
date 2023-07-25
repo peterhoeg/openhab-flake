@@ -197,6 +197,17 @@ rec {
     inherit (openhab34) version;
   };
 
+  openhab40 = generic {
+    version = "4.0.0";
+    hash = "sha256-C7H4i75vsyDrjo3gyVL+zAcIyuFbeVpoNtONeewTdL4=";
+  };
+
+  openhab40-addons = addon {
+    pname = "openhab-addons";
+    hash = "sha256-/smqxbat1rzTiMkXTM+LtAJxS77u+YPp+amup8PThGQ=";
+    inherit (openhab40) version;
+  };
+
   openhab-stable = openhab34;
   openhab-stable-addons = openhab34-addons;
 
