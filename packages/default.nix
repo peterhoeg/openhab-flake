@@ -187,24 +187,24 @@ rec {
   };
 
   openhab34 = generic {
-    version = "3.4.4";
-    hash = "sha256-RQCgABQcNu7mhwLQrZLzOSyb13q91zpZO6LcZD9D8Bc=";
+    version = "3.4.5";
+    hash = "sha256-BRiC5LqoPVq0vJ4e3rFwx9VHTEQj3JZa2x+Ak0vz10s=";
   };
 
   openhab34-addons = addon {
     pname = "openhab-addons";
-    hash = "sha256-hSZx4T+jUXCUfknPens0I7QimAfITx4m1oH079E46No=";
+    hash = "sha256-Rr9G4aA8Le51Vcyewl020kiF2CO09b++TLeESvDtZ90=";
     inherit (openhab34) version;
   };
 
   openhab40 = generic {
-    version = "4.0.0";
-    hash = "sha256-C7H4i75vsyDrjo3gyVL+zAcIyuFbeVpoNtONeewTdL4=";
+    version = "4.0.1";
+    hash = "sha256-Pp93zYTHQx2xPKNLdLsvuYYpb04R75F+Xhcks/1Jj2A=";
   };
 
   openhab40-addons = addon {
     pname = "openhab-addons";
-    hash = "sha256-/smqxbat1rzTiMkXTM+LtAJxS77u+YPp+amup8PThGQ=";
+    hash = "sha256-7bNPetR3zPxfmxcZWBObeA0nNUOERjxLjiqdbYlbt1w=";
     inherit (openhab40) version;
   };
 
