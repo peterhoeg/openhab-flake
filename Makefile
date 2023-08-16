@@ -1,4 +1,5 @@
-BUILD = @nix build .\#openhab$(1) .\#openhab$(1)-addons
+ARGS ?= --keep-going --no-keep-outputs --print-out-paths
+BUILD = @nix build .\#openhab$(1) .\#openhab$(1)-addons $(ARGS)
 
 default: all
 
