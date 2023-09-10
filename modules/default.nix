@@ -92,6 +92,8 @@ let
     pkgs.runCommandLocal "openhab-config" { } (''
       dir=$out/etc/openhab
 
+      # set -x
+
       # addons.cfg
       install -Dm444 ${attrsToPlainFile cfg.initialAddons "addons.cfg"} $dir/conf/services/addons.cfg
 
@@ -193,10 +195,10 @@ let
     + ''
       install -Dm444 ${json.generate "users_override.json" (mapAttrs (k: v: (user k v)) cfg.users.users)} $dir/userdata/users_override.json
     ''
-    # remove trailing whitespace from all generated files
+    # remove trailing whitespace from all generated files. Ignore failure in case we have no generated files.
     + concatStringsSep "\n" (map
       (e: ''
-        find $dir -type f -name '*.${e}' -print0 | xargs -0 sed -i 's/[ \t]*$//'
+        find $dir -type f -name '*.${e}' -print0 | xargs -0 sed -i 's/[ \t]*$//' || true
       '') [ "cfg" "config" "items" "persist" "things" ])
     );
 
