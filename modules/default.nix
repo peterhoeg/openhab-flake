@@ -3,28 +3,28 @@
 let
   inherit (lib)
     concatStringsSep concatMapStringsSep
-    mapAttrs mapAttrsToList
-    optional optionals optionalString
-    toLower
+    mapAttrs mapAttrsToList recursiveUpdate
+    optionals optionalString optionalAttrs
+    getBin getExe toLower
     mkDefault mkEnableOption mkIf mkForce mkMerge mkOption literalExample types;
 
   inherit (lib.versions) majorMinor;
 
-  inherit (import ./helpers.nix { inherit config lib pkgs; })
+  inherit (import ../lib/helpers.nix { inherit config lib pkgs; })
     attrsToItem attrsToThing
     attrsToFile attrsToPlainFile
     attrsToPlainText attrsToQuotedText
     attrsToConfig attrsToSitemap
     itemFileName thingFileName
     entityName macToName
-    keyPrefix isV2 isV2dot5 isV3 isV3dot1 isV3dot2 isV3dot3 wrapBinary;
+    keyPrefix isV2 isV2dot5 isV3 isV3dot1 isV3dot2 isV3dot3 isV3dot4 wrapBinary;
 
   cfg = config.services.openhab;
 
   json = pkgs.formats.json { };
   yaml = pkgs.formats.yaml { };
 
-  packages = pkgs.callPackages <pkgs/openhab> { };
+  packages = pkgs.openhab;
 
   javaBin =
     if cfg.java.elevatePermissions
@@ -35,9 +35,23 @@ let
 
   libDir = "/var/lib/openhab";
 
+  rulesDirs = {
+    dsl = "${libDir}/conf/rules";
+    ruby = "${libDir}/conf/automation/jsr223/ruby/personal";
+  };
+  rulesTmpDir = "${libDir}/tmp/rules";
+
   dirName = builtins.baseNameOf libDir;
 
+  restartMarker = "${libDir}/.restart";
+  heartbeatMarker = "${libDir}/.heartbeat";
   versionMarker = "${libDir}/.version";
+  # we could also just use majorMinor but I *think* we need to do our cache
+  # dance when changing the patch version.
+  versionTag = cfg.package.version;
+
+  sortByName = list:
+    lib.sort (a: b: a.name < b.name) list;
 
   fileExt = type:
     {
@@ -51,15 +65,12 @@ let
   filePath = type: name:
     "${type}/${name}.${fileExt type}";
 
-  # mapAttrsToText = k: v: list:
-  #   lib.concatStringsSep "\n" (lib.mapAttrsToList () )
-
   writeFormattedContents = fn: textOrAttrs:
     if builtins.isAttrs textOrAttrs
     then fn textOrAttrs
     else textOrAttrs;
 
-  cfgDrv = pkgs.runCommand "openhab-config" { } (
+  cfgDrv =
     let
       catToFile = source: target: ''
         cat ${source} >> ${target}
@@ -78,7 +89,7 @@ let
       whiteList = pkgs.writeText "exec.whitelist" (concatStringsSep "\n" cfg.execWhiteList);
 
     in
-    ''
+    pkgs.runCommandLocal "openhab-config" { } (''
       dir=$out/etc/openhab
 
       # addons.cfg
@@ -93,8 +104,7 @@ let
     '' + processAttr
       (type: items:
         let
-          writeContents =
-            writeFormattedContents attrsToPlainText;
+          writeContents = writeFormattedContents attrsToPlainText;
 
         in
         concatStringsSep "\n" (mapAttrsToList
@@ -114,7 +124,7 @@ let
           file = pkgs.writeText (itemFileName item) (attrsToItem item);
         in
         catToFile file name)
-      cfg.items
+      (sortByName cfg.items)
     # rules
     + processList
       (item: ''
@@ -146,7 +156,7 @@ let
         let name = builtins.baseNameOf e;
         in
         ''
-          install -Dm444 ${e} $dir/conf/automation/jsr223/ruby/personal/${name}
+          install -Dm444 ${e} $dir/${lib.removePrefix libDir rulesDirs.ruby}/${name}
         ''
       )
       cfg.jruby.rules
@@ -156,7 +166,7 @@ let
         let name = builtins.baseNameOf e;
         in
         ''
-          install -Dm444 ${e} $dir/conf/automation/lib/ruby/${name}
+          install -Dm444 ${e} $dir/conf/automation/ruby/lib/${name}
         ''
       )
       cfg.jruby.libs
@@ -173,9 +183,7 @@ let
     # userdata/
     + processList
       (e:
-        let
-          writeContents =
-            writeFormattedContents attrsToConfig;
+        let writeContents = writeFormattedContents attrsToConfig;
         in
         ''
           install -Dm444 ${pkgs.writeText (builtins.baseNameOf e.name) (writeContents e.contents)} $dir/userdata/${e.name}
@@ -185,26 +193,40 @@ let
     + ''
       install -Dm444 ${json.generate "users_override.json" (mapAttrs (k: v: (user k v)) cfg.users.users)} $dir/userdata/users_override.json
     ''
-  );
+    # remove trailing whitespace from all generated files
+    + concatStringsSep "\n" (map
+      (e: ''
+        find $dir -type f -name '*.${e}' -print0 | xargs -0 sed -i 's/[ \t]*$//'
+      '') [ "cfg" "config" "items" "persist" "things" ])
+    );
 
-  setupScript = pkgs.writeShellScript "openhab-setup"
-    (
-      let
-        v2log = [
-          { key = "log4j2.rootLogger.level"; value = cfg.logging.logLevel; }
-          { key = "log4j2.rootLogger.appenderRefs"; value = "stdout"; }
-          { key = "log4j2.rootLogger.appenderRef.stdout.ref"; value = "STDOUT"; }
-          { key = "log4j2.appender.console.layout.pattern"; value = "<%level{FATAL=2, ERROR=3, WARN=4, INFO=5, DEBUG=6, TRACE=7}>[%-36.36c] - %m%n"; }
+  setupScript =
+    let
+      v2log = {
+        "log4j2.rootLogger.level" = cfg.logging.logLevel;
+        "log4j2.rootLogger.appenderRefs" = "stdout";
+        "log4j2.rootLogger.appenderRef.stdout.ref" = "STDOUT";
+        "log4j2.appender.console.layout.pattern" = "<%level{FATAL=2, ERROR=3, WARN=4, INFO=5, DEBUG=6, TRACE=7}>[%-36.36c] - %m%n";
+      };
+
+    in
+    pkgs.resholve.writeScriptBin "openhab-setup"
+      {
+        interpreter = pkgs.runtimeShell;
+        inputs = with pkgs; [ coreutils crudini findutils jq xmlstarlet ];
+        execer = with pkgs; [
+          "cannot:${getExe crudini}"
+          # "cannot:${getExe xmlstarlet}"
         ];
-
-      in
-      ''
+      }
+      (''
         set -eEuo pipefail
 
-        DIST_DIR=${cfg.finalPackage}/share/openhab
+        DIST_DIR=${runEnv.OPENHAB_HOME}
 
         # Use this in case of problems with the generated configuration
         if [ ''${OPENHAB_SKIP_SETUP:-0} -eq 1 ]; then
+          echo "Skipping setup as OPENHAB_SKIP_SETUP is set"
           exit 0
         fi
 
@@ -238,10 +260,15 @@ let
         fi
 
         if [ -e "${versionMarker}" ]; then
-          if [ "${majorMinor cfg.package.version}" != "$(head -n1 ${versionMarker})" ]; then
+          if [ "${versionTag}" != "$(head -n1 ${versionMarker})" ]; then
             echo "Detected up- or downgrade"
             wipe_cache
           fi
+        fi
+
+        if [ -e "${heartbeatMarker}" ]; then
+          echo "Cleaning stale heartbeat marker"
+          rm ${heartbeatMarker}
         fi
 
         test -d $OPENHAB_USERDATA || touch ${libDir}/.first_run
@@ -271,28 +298,36 @@ let
         # recursively copy and symlink files into place
         cp ''${args[@]} -sf ${cfgDrv}/etc/openhab/* ${libDir}/
 
-      '' + optionalString cfg.users.enable ''
+        # karaf
+        crudini --set $OPENHAB_USERDATA/etc/system.properties "" karaf.history ${libDir}/.karaf/karaf.history
+
+      ''
+      + optionalString cfg.users.enable ''
         file=$OPENHAB_USERDATA/jsondb/users.json
         if [ -e $file ]; then
           t=$(mktemp)
-          cat $file ${libDir}/userdata/users_override.json | ${lib.getBin pkgs.jq}/bin/jq -s add > $t
+          cat $file ${libDir}/userdata/users_override.json | jq -s add > $t
           mv $t $file
         else
           install -Dm644 ${libDir}/userdata/users_override.json $file
         fi
 
-      '' + optionalString (isV2 && cfg.logging.toStdout) ''
+      ''
+      + optionalString (isV2 && cfg.logging.toStdout) ''
         file=$OPENHAB_USERDATA/etc/org.ops4j.pax.logging.cfg
         if [ -e $file ]; then
-          ${concatMapStringsSep "\n" (e: ''${pkgs.crudini}/bin/crudini --set $file "" "${e.key}" "${e.value}"'') v2log}
+          ${concatStringsSep "\n" (mapAttrsToList (n: v: ''
+            crudini --set $file "" "${n}" "${v}"
+            '') v2log)}
         fi
 
-      '' + optionalString (isV3 && cfg.logging.toStdout) ''
+      ''
+      + optionalString (isV3 && cfg.logging.toStdout) ''
         file=$OPENHAB_USERDATA/etc/log4j2.xml
 
         if [ -e $file ]; then
           # http://xmlstar.sourceforge.net/doc/UG/ch04s03.html
-          ${pkgs.xmlstarlet}/bin/xml ed --inplace \
+          xml ed --inplace \
             --update "/Configuration/Appenders/Console/PatternLayout/@pattern" \
             -v '${cfg.logging.format}' \
             --update "/Configuration/Loggers/Root/@level" \
@@ -302,32 +337,42 @@ let
             $file
         fi
       ''
-    );
+      + optionalString cfg.workarounds.delayRules.enable (
+        concatStringsSep "\n" (mapAttrsToList
+          (n: v: ''
+            dir=${rulesTmpDir}/${n}
+            test -e $dir || mkdir -p $dir
+            for f in ${v}/*; do
+              test -e "$f" || continue
+              mv "$f" $dir/
+            done
+          '')
+          rulesDirs)
+      ));
 
   waitScript = port:
-    pkgs.writeShellScript "wait-for-openhab" (
-      let
-        port' = toString port;
+    let
+      port' = toString port;
 
-      in
-      ''
-        export PATH=$PATH:${lib.makeBinPath (with pkgs; [ coreutils gnugrep iproute ])}
-
+    in
+    pkgs.writeShellApplication {
+      name = "wait-for-openhab";
+      runtimeInputs = with pkgs; [ coreutils gnugrep iproute ];
+      text = ''
         timeout 60 ${pkgs.runtimeShell} -c \
           'while ! ss -H -t -l -n sport = :${port'} | grep -q "^LISTEN.*:${port'}"; do sleep 1; done'
-      ''
-    );
+      '';
+    };
 
-  ruleReloadScript = pkgs.writeShellScript "openhab-rules-reload " ''
-    set -eEuo pipefail
-    # trigger rules reloading. This file is empty.
-    touch ${libDir}/conf/rules/trigger.rules
-  '';
-
-  storeVersionScript = pkgs.writeShellScript "openhab-store-version" ''
-    set -eEuo pipefail
-    echo -n "${majorMinor cfg.package.version}" > ${versionMarker}
-  '';
+  storeVersionScript = pkgs.resholve.writeScriptBin "openhab-store-version"
+    {
+      interpreter = pkgs.runtimeShell;
+      inputs = with pkgs; [ coreutils ];
+    }
+    ''
+      set -eEuo pipefail
+      echo -n "${versionTag}" > ${versionMarker}
+    '';
 
   user = k: v: {
     class = "org.openhab.core.auth.ManagedUser";
@@ -342,14 +387,11 @@ let
   bluetoothDbus = pkgs.writeTextFile rec {
     name = "openhab-bluetooth.conf";
     text = ''
-      < ?xml version= "1.0" encoding="UTF-8"?>
-      <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
-      "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN" "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
       <busconfig>
         <policy group="bluetooth">
-          <!--
           <allow own="org.bluez"/>
-          -->
           <allow send_destination="org.bluez"/>
           <allow send_interface="org.bluez.Agent1"/>
           <allow send_interface="org.bluez.MediaEndpoint1"/>
@@ -362,14 +404,132 @@ let
           <allow send_interface="org.freedesktop.DBus.Properties"/>
           <allow send_interface="org.mpris.MediaPlayer2.Player"/>
         </policy>
-
-        <policy group="bluetooth">
-          <allow send_destination="org.bluez"/>
-        </policy>
       </busconfig>
     '';
     destination = "/share/dbus-1/system.d/${name}";
   };
+
+  runEnv = rec {
+    JAVA = javaBin;
+    JAVA_HOME = cfg.java.package.home;
+    JAVA_OPTS = lib.concatStringsSep " " ([
+      "-XshowSettings:vm"
+      "-Xms${cfg.java.memoryMin}"
+      "-Xmx${cfg.java.memoryMax}"
+      "-XX:MaxMetaspaceSize=${cfg.java.metaMax}"
+    ] ++ cfg.java.additionalArguments);
+
+    # upstream's launcher script doesn't use exec unless running in daemon mode so force it
+    # KARAF_EXEC = "exec";
+
+    OPENHAB_CONF = "${libDir}/conf";
+    OPENHAB_USERDATA = "${libDir}/userdata";
+    OPENHAB_HOME = "${cfg.finalPackage}/share/openhab";
+    OPENHAB_RUNTIME = "${OPENHAB_HOME}/runtime";
+    OPENHAB_LOGDIR = "/var/log/openhab";
+    OPENHAB_HTTP_PORT = toString cfg.ports.http;
+    OPENHAB_HTTPS_PORT = toString cfg.ports.https;
+  } // optionalAttrs cfg.debug {
+    KARAF_DEBUG = 1;
+  };
+
+  openhabCli =
+    let
+      binDir = "${runEnv.OPENHAB_RUNTIME}/bin";
+      # we do not want to allocate multiple GBs for the console
+      runEnv' = lib.filterAttrs (n: _: n != "JAVA_OPTS") runEnv;
+
+    in
+    pkgs.resholve.writeScriptBin "openhab-cli"
+      {
+        interpreter = pkgs.runtimeShell;
+        inputs = with pkgs; [ coreutils binDir systemd ];
+        execer = [
+          "cannot:${binDir}/client"
+          "cannot:${getBin pkgs.systemd}/bin/systemctl"
+        ];
+      }
+      ''
+        set -eEuo pipefail
+
+        _help() {
+          echo "Usage: $(basename "$0") [command]"
+          echo ""
+          echo "Commands: "
+          echo "  - client      : open the openHAB client"
+          echo "  - clean-cache : clean cache on next restart"
+          echo "  - info        : show info"
+          echo "  - log         : show log"
+          echo "  - reset       : reset the configuration fully on next restart"
+          exit 1
+        }
+
+        export HOME=${libDir}
+        ${concatStringsSep "\n" (mapAttrsToList (n: v: ''export ${n}="${toString v}"'') runEnv')}
+
+        if [ -n "''${1:-}" ]; then
+          cmd=$1
+          shift
+        else
+          _help
+        fi
+
+        case $cmd in
+          client|console)
+            echo "Default password: habopen"
+            client "$@"
+            ;;
+          clean-cache)
+            echo "Cleaning cache on next restart"
+            touch ${libDir}/.reset_cache
+            ;;
+          info)
+            echo "openHAB: ${versionTag}"
+            echo ""
+            echo "Environment:"
+            ${concatStringsSep "\n" (mapAttrsToList (n: v: ''echo " - ${n}=${toString v}"'') runEnv)}
+            echo ""
+            echo "Status: "
+            systemctl status --lines 0 --no-pager openhab
+            ;;
+          log)
+            journalctl -f -u openhab
+            ;;
+          reset)
+            echo "Doing full reset on next restart"
+            touch ${libDir}/.reset
+            ;;
+          -h|--help)
+            _help
+            ;;
+          *)
+            echo "Unknown command: $cmd"
+            _help
+            ;;
+        esac
+      '';
+
+
+  delayRules = pkgs.resholve.writeScriptBin "openhab-delay-rules"
+    {
+      interpreter = pkgs.runtimeShell;
+      inputs = with pkgs; [ coreutils ];
+    }
+    (
+      ''
+        sleep ${toString cfg.workarounds.delayRules.delay}
+      ''
+      + concatStringsSep "\n" (mapAttrsToList
+        (n: v: ''
+          dir=${v}
+          test -e $dir || mkdir -p $dir
+          for f in ${rulesTmpDir}/${n}/*; do
+            test -e "$f" || continue
+            mv "$f" $dir/
+          done
+        '')
+        rulesDirs)
+    );
 
 in
 {
@@ -451,6 +611,8 @@ in
           (with packages; [ openhab32-addons ])
           ++ optionals (cfg.withDefaultAddons && isV3dot3)
           (with packages; [ openhab33-addons ])
+          ++ optionals (cfg.withDefaultAddons && isV3dot4)
+          (with packages; [ openhab34-addons ])
         );
       type = types.package;
       readOnly = true;
@@ -522,13 +684,6 @@ in
       '';
     };
 
-    # things = {
-    #   astro = \'\'
-    #     Thing astro:moon:local "Moon" @ "Outside" [geolocation="123,123"]
-    #     Thing astro:sun:local  "Sun" @ "Outside"  [geolocation="123,123"]
-    #   \'\';
-    # };
-
     conf = mkOption {
       default = { };
       type = types.attrs;
@@ -594,7 +749,8 @@ in
     items = mkOption {
       default = [ ];
       description = "Items";
-      type = types.listOf (types.submodule (import ./items.nix { inherit lib pkgs; }));
+      # we need config here because we import helpers which requires it
+      type = types.listOf (types.submodule (import ./items.nix { inherit config lib pkgs; }));
     };
 
     things = mkOption {
@@ -649,8 +805,7 @@ in
 
     java = {
       package = mkOption {
-        # default = if isV2 then pkgs.jre8_headless else pkgs.jdk11_headless;
-        default = (if isV2 then pkgs.zulu8 else pkgs.zulu).override { gtkSupport = false; };
+        default = if isV2 then pkgs.zulu8 else pkgs.openjdk17_headless;
         example = "pkgs.oraclejdk8";
         type = types.package;
         description = ''
@@ -672,8 +827,14 @@ in
         '';
       };
 
+      memoryMin = mkOption {
+        description = "Initial memory to use.";
+        type = types.str;
+        default = "768m";
+      };
+
       memoryMax = mkOption {
-        description = "Maximum memory to use. It is pre-allocated up front to speed up openHAB launch";
+        description = "Maximum memory to use.";
         type = types.str;
         default = "768m";
       };
@@ -789,24 +950,74 @@ in
     };
 
     workarounds = {
-      ruleLoading = mkEnableOption "work around rule loading not happening";
+      delayRules = {
+        enable = mkOption {
+          description = ''
+            Work around rules loading too early. You probably want this enabled.
+            The only downside is a slight delay after start before the rules
+            will run. A similar workaround exists for openHABian.
+          '';
+          type = types.bool;
+          default = true;
+        };
+
+        delay = mkOption {
+          description = ''
+            Delay before we load the rules. The default is completely arbitrary
+            and depends on the speed of the computer on which you run openHAB as
+            well as the number of bindings and things/items. If you have a fast
+            machine, try lowering it and do the opposite in case of a slow device
+            like an rpi.
+          '';
+          type = types.ints.positive;
+          default = 60;
+        };
+      };
 
       lockDir = mkEnableOption "work around lock directory permissions";
 
-      # openHAB v2 sometimes stops reading temperatures via MQTT, so restart openHAB when we
-      # typically do not need it
       restart = {
-        onDeploy = mkEnableOption "restarting openHAB when deploying new configuration";
+        onDeploy = mkEnableOption "restarting openHAB when deploying new configurations as the load order is not deterministic";
 
         scheduled = {
-          enable = mkEnableOption "scheduled restart to work around MQTT messages not being sent";
+          enable = mkEnableOption ''
+            scheduled restart. You might want to enable this as openHAB
+            v2 sometimes stops reading temperatures via MQTT and v3 will
+            sometimes leak memory.
+          '';
 
           restartAt = mkOption {
-            description = "Restart daily at";
+            description = "Time at which to restart. Choose a time when openHAB isn't doing anything";
             type = types.str;
-            default = "*-*-* 08:00:00";
+            default = "*-*-* 05:00:00";
           };
         };
+      };
+    };
+
+    cloud = {
+      enable = mkOption {
+        description = lib.mdDoc "Enable cloud monitoring";
+        type = types.bool;
+        default = cfg.cloud.user != null && cfg.cloud.pass != null;
+        readOnly = true;
+      };
+
+      user = mkOption {
+        description = lib.mdDoc "User";
+        type = with types; nullOr (either string path);
+        default = null;
+      };
+
+      pass = mkOption {
+        description = lib.mdDoc "Password";
+        type = with types; nullOr (either string path);
+        default = null;
+      };
+
+      item = mkOption {
+        description = lib.mdDoc "Item for heartbeat monitoring";
+        type = types.str;
       };
     };
   };
@@ -817,11 +1028,66 @@ in
     })
 
     {
+      environment.systemPackages = [
+        openhabCli
+        # TODO: move this out of toupstream
+        (pkgs.resholve.writeScriptBin "copy-openhab-config"
+          {
+            interpreter = pkgs.runtimeShell;
+            inputs = with pkgs; [ coreutils config.programs.git.package ];
+            execer = [ "cannot:${getExe config.programs.git.package}" ];
+          }
+          ''
+            set -eEuo pipefail
+
+            SRC=/etc/openhab
+            TGT=''${1:-''${XDG_STATE_HOME:-$HOME/.local/state}/openhab}
+
+            if [ ! -e "$SRC" ]; then
+              echo "openHAB config not found in $SRC. Aborting!"
+              exit 1
+            fi
+
+            test -e "$TGT" || mkdir -p "$TGT"
+
+            pushd "$TGT"
+            FIRST_RUN=0
+            if [ ! -d .git ]; then
+              git init --object-format=sha256
+              FIRST_RUN=1
+            fi
+            rm -rf conf userdata
+            cp --no-preserve=all -r "$SRC"/* "$TGT/"
+
+            mkdir -p userdata/tmp/instances
+            cat >userdata/tmp/instances/instance.properties <<_EOF
+            count = 1
+            item.0.name = openhab
+            item.0.loc = /home/peter/.local/state/openhab/userdata
+            item.0.pid = 779086
+            item.0.root = true
+            _EOF
+
+            if [ "$FIRST_RUN" -eq 1 ]; then
+              git add .
+              git commit -m 'initial commit'
+            fi
+          '')
+      ];
+
       services.openhab = {
         items = lib.flatten
           (map
             (e: (import e { inherit config lib pkgs; }).items)
-            cfg.itemThingFiles);
+            cfg.itemThingFiles)
+        ++ optionals cfg.cloud.enable [
+          {
+            name = cfg.cloud.item;
+            label = "Cloud Heartbeat";
+            type = "DateTime";
+            file = "_generated";
+          }
+        ];
 
         things = lib.flatten
           (map
@@ -831,7 +1097,11 @@ in
     }
 
     (mkIf cfg.configOnly {
-      environment.etc."openhab".source = cfgDrv;
+      environment = {
+        etc."openhab".source = "${cfgDrv}/etc/openhab";
+        # we don't want to pull in java and all the other stuff
+        # systemPackages = [ openhabCli ];
+      };
     })
 
     (mkIf (!cfg.configOnly) {
@@ -842,10 +1112,9 @@ in
         # https://github.com/Vudentz/BlueZ/blob/master/src/main.conf
         settings = {
           General = {
-            ControllerMode = "le"; # dual bredr le  - now we have LE support
+            ControllerMode = "dual"; # dual bredr le  - now we have LE support
             FastConnectable = true;
           };
-          Controller = { };
           GATT = { };
         };
       };
@@ -866,7 +1135,9 @@ in
         };
       };
 
-      services.dbus.packages = optional cfg.bluetooth.enable bluetoothDbus;
+      services.dbus = mkIf cfg.bluetooth.enable {
+        packages = [ bluetoothDbus ];
+      };
 
       services.udev = {
         # extraRules = lib.concatStringsSep ", " ([
@@ -878,207 +1149,282 @@ in
         #   ''SYMLINK+="${cfg.zigbee.device}" ''
         #   ''TAG+="systemd" ''
         # ]
-        # ++ optional (!cfg.zigbee.enable) ''ENV{SYSTEMD_WANTS}="zigbee2mqtt.service"''
+        # ++ optionals (!cfg.zigbee.enable) [ ''ENV{SYSTEMD_WANTS}="zigbee2mqtt.service"'' ]
         # );
       };
 
       systemd = {
+        paths.openhab-restart = {
+          description = "Restart openHAB";
+          wantedBy = [ "paths.target" ];
+          pathConfig = {
+            PathExists = restartMarker;
+            Unit = "openhab-restart.service";
+            TriggerLimitIntervalSec = "10s";
+          };
+        };
+
         services =
           let
             documentation = [
-              https://www.openhab.org/docs/
-              https://community.openhab.org
+              "https://www.openhab.org/docs/"
+              "https://community.openhab.org"
             ];
 
-            environment = {
-              JAVA = javaBin;
-              JAVA_HOME = cfg.java.package;
-              JAVA_OPTS = lib.concatStringsSep " " ([
-                "-XshowSettings:vm"
-                "-Xms${cfg.java.memoryMax}"
-                "-Xmx${cfg.java.memoryMax}"
-                "-XX:MaxMetaspaceSize=${cfg.java.metaMax}"
-              ] ++ cfg.java.additionalArguments);
-              KARAF_DEBUG = mkIf cfg.enable "true";
-              # upstream's launcher script doesn't use exec
-              # unless running in daemon mode so we force it here
-              # KARAF_EXEC = "exec";
-              OPENHAB_CONF = "${libDir}/conf";
-              OPENHAB_USERDATA = "${libDir}/userdata";
-              OPENHAB_HOME = "${cfg.finalPackage}/share/openhab";
-              OPENHAB_LOGDIR = "/var/log/openhab";
-              OPENHAB_HTTP_PORT = toString cfg.ports.http;
-              OPENHAB_HTTPS_PORT = toString cfg.ports.https;
-            };
+            environment = runEnv;
 
             wantedBy = [ "openhab.target" ];
 
-            commonServiceConfig = {
-              DynamicUser = true;
-              User = "openhab";
-              Group = "openhab";
-              SyslogIdentifier = "%N";
-              PrivateTmp = true;
-              ProtectHome = "tmpfs";
-              ProtectControlGroups = true;
-              ProtectKernelModules = true;
-              ProtectKernelTunables = true;
-              ProtectSystem = "strict";
-              RemoveIPC = true;
-              RestrictAddressFamilies = [
-                "AF_UNIX"
-                "AF_INET"
-                "AF_INET6"
-                "AF_NETLINK"
-              ];
-              RestrictRealtime = true;
-              RestrictSUIDSGID = true;
-              SystemCallArchitectures = "native";
-              CacheDirectory = dirName;
-              StateDirectory = dirName;
-              WorkingDirectory = libDir;
-              # TODO: move keys somewhere else
-              SupplementaryGroups = [
-                "openhab-keys"
-              ]
-              ++ optional cfg.bluetooth.enable "bluetooth";
-              Slice = "openhab.slice";
-            };
+            commonServiceConfig = attrs:
+              recursiveUpdate
+                {
+                  DynamicUser = true;
+                  User = "openhab";
+                  Group = "openhab";
+                  SyslogIdentifier = "%N";
+                  PrivateTmp = true;
+                  ProtectHome = "tmpfs";
+                  ProtectControlGroups = true;
+                  ProtectKernelModules = true;
+                  ProtectKernelTunables = true;
+                  ProtectSystem = "strict";
+                  RemoveIPC = true;
+                  # RestrictAddressFamilies = [
+                  #   "AF_UNIX"
+                  #   "AF_INET"
+                  #   "AF_INET6"
+                  #   "AF_NETLINK"
+                  #   "AF_PACKET"
+                  # ]
+                  # ++ optionals cfg.bluetooth.enable [ "AF_PACKET" ];
+                  RestrictRealtime = true;
+                  RestrictSUIDSGID = true;
+                  SystemCallArchitectures = "native";
+                  CacheDirectory = dirName;
+                  StateDirectory = dirName;
+                  WorkingDirectory = libDir;
+                  # TODO: move keys somewhere else
+                  SupplementaryGroups = [
+                    "openhab-tokens"
+                  ]
+                  ++ optionals cfg.bluetooth.enable [
+                    "bluetooth"
+                  ];
+                  Slice = "openhab.slice";
+                  InaccessiblePaths = [
+                    "-/var/lib/containers"
+                  ];
+                }
+                attrs;
 
           in
           {
-            openhab-keys = rec {
-              description = "openHAB - copy in keys";
+            openhab-tokens = rec {
+              description = "openHAB - copy in tokens";
               inherit documentation environment wantedBy;
               after = [ "openhab-setup.service" ];
               wants = after;
-              script = ''
-                set -eEuo pipefail
-                test -e ${privateDir} || exit 0
-
-                _copy() {
-                  source="$1"
-                  target="$2"
-
-                  install --preserve-timestamps -Dm666 "$source" "$target"
-                }
-
-                _conditional_copy() {
-                  source="${privateDir}/$1"
-                  target="${libDir}/$2/$1"
-
-                  if [ -e ${libDir}/.first_run ]; then
-                    _copy "$source" "$target"
-                  elif [ ! -e "$target" ]; then
-                    _copy "$source" "$target"
-                  fi
-                }
-
-              '' + lib.concatMapStringsSep "\n"
-                (e: ''_conditional_copy "${e.name}" "${e.path}"'')
-                cfg.keyFiles + ''
-
-                rm -f ${libDir}/.first_run
-              '';
-
-              serviceConfig = commonServiceConfig // {
+              unitConfig.ConditionPathExists = privateDir;
+              serviceConfig = commonServiceConfig {
                 Type = "oneshot";
                 PrivateDevices = true;
                 PrivateNetwork = true;
-                SyslogIdentifier = "openhab-keys";
+                ExecStart =
+                  let
+                    script = ''
+                      set -eEuo pipefail
+
+                      FIRST_RUN=${libDir}/.first_run
+
+                      _copy() {
+                        source="$1"
+                        target="$2"
+
+                        install --preserve-timestamps -Dm666 "$source" "$target"
+                      }
+
+                      _conditional_copy() {
+                        source="${privateDir}/$1"
+                        target="${libDir}/$2/$1"
+
+                        if [ -e $FIRST_RUN ]; then
+                          _copy "$source" "$target"
+                        elif [ ! -e "$target" ]; then
+                          _copy "$source" "$target"
+                        fi
+                      }
+                    ''
+                    + concatMapStringsSep "\n" (e: ''_conditional_copy "${e.name}" "${e.path}"'') cfg.keyFiles
+                    + ''
+
+                      rm -f $FIRST_RUN
+                    '';
+
+                  in
+                  getExe (pkgs.resholve.writeScriptBin "openhab-tokens"
+                    {
+                      interpreter = pkgs.runtimeShell;
+                      inputs = with pkgs; [ coreutils ];
+                    }
+                    script);
               };
             };
 
-            openhab-setup = rec {
+            openhab-setup = {
               description = "openHAB - copy and link config files into place";
               inherit documentation environment wantedBy;
               restartTriggers = [ cfgDrv ];
-              serviceConfig = commonServiceConfig // {
+              serviceConfig = commonServiceConfig {
                 Type = "oneshot";
-                ExecStart = setupScript;
+                ExecStart = getExe setupScript;
                 PrivateDevices = true;
                 PrivateNetwork = true;
-                SyslogIdentifier = "openhab-setup";
               };
             };
 
             openhab = rec {
               description = "openHAB ${toString cfg.package.version}";
               inherit documentation environment wantedBy;
-              wants = [ "network-online.target" ];
-              requires = [ "openhab-setup.service" ];
-              after = wants ++ requires;
+              wants = [ "network-online.target" "nss-lookup.target" "openhab-setup.service" ];
+              after = wants;
               path = [
                 "/run/wrappers"
                 cfg.java.package
                 pkgs.ffmpeg
                 pkgs.ncurses # needed by the infocmp program
               ];
-              restartTriggers = [ ]
-                # we do NOT need to restart with OH 3 as it will pick up changed files
-                ++ optionals isV2 [ cfgDrv setupScript ]
-                ++ optionals cfg.workarounds.restart.onDeploy [ cfgDrv ];
+              restartTriggers = [
+              ]
+              # we do NOT need to restart with OH 3 as it will pick up changed files
+              ++ optionals (isV2 || cfg.workarounds.restart.onDeploy) [
+                cfgDrv
+                (getExe setupScript)
+              ];
 
-              serviceConfig = commonServiceConfig // {
-                Type =
-                  if (lib.versionAtLeast pkgs.systemd.version "240")
-                  then "exec"
-                  else "simple";
-                SupplementaryGroups = commonServiceConfig.SupplementaryGroups ++ [
-                  "audio"
-                  "dialout"
-                  "tty"
-                ] ++ optional cfg.workarounds.lockDir "uucp"; # needed for /run/lock with zigbee
-                AmbientCapabilities = [
-                  # TODO: find out why it fails without all capabilities
-                  "~"
-                  # "CAP_NET_ADMIN"
-                  # "CAP_NET_BIND_SERVICE"
-                  # "CAP_NET_RAW"
-                ];
-                ExecStart = concatStringsSep " " ([
-                  "${cfg.finalPackage}/bin/openhab"
-                  "run"
-                ] ++ optional cfg.debug "-v -l 4"
-                );
-                ExecStop = "${cfg.finalPackage}/bin/openhab stop";
-                ExecStartPost = [
-                  (waitScript cfg.ports.http)
-                  storeVersionScript
-                ] ++ optional cfg.workarounds.ruleLoading ruleReloadScript;
-                SuccessExitStatus = "0 143";
-                RestartSec = "5s";
-                Restart = "on-failure";
-                TimeoutStopSec = "120";
-                LimitNOFILE = "102642";
-                ReadWriteDirectories = [
-                  "/run/lock"
-                  "/var/lock"
-                ];
-              } // (if cfg.logToRamdisk then {
+              serviceConfig = commonServiceConfig
+                {
+                  Type =
+                    if (lib.versionAtLeast pkgs.systemd.version "240")
+                    then "exec"
+                    else "simple";
+                  SupplementaryGroups = (commonServiceConfig { }).SupplementaryGroups ++ [
+                    "audio"
+                    "dialout"
+                    "tty"
+                  ]
+                    ++ optionals cfg.workarounds.lockDir [ "uucp" ]; # needed for /run/lock with zigbee
+                  AmbientCapabilities = [
+                    # TODO: find out why it fails without all capabilities
+                    "~"
+                    # "CAP_NET_ADMIN"
+                    # "CAP_NET_BIND_SERVICE"
+                    # "CAP_NET_RAW"
+                  ];
+                  ExecStartPre = optionals cfg.bluetooth.enable [
+                    (lib.getExe (pkgs.resholve.writeScriptBin "toggle-bluetooth"
+                      {
+                        interpreter = lib.getExe pkgs.bash;
+                        inputs = with pkgs; [ coreutils config.hardware.bluetooth.package ];
+                      }
+                      ''
+                        DEV=hci0
+
+                        sleep 10
+                        hciconfig $DEV down
+                        sleep 10
+                        hciconfig $DEV up
+                      ''))
+                  ];
+
+                  ExecStart = concatStringsSep " " ([
+                    "${cfg.finalPackage}/bin/openhab"
+                    "run"
+                  ]
+                  ++ optionals cfg.debug [ "-v -l 4" ]
+                  );
+                  ExecStartPost = map getExe ([
+                    (waitScript cfg.ports.http)
+                    storeVersionScript
+                  ] ++ optionals cfg.workarounds.delayRules.enable [
+                    delayRules
+                  ]);
+                  ExecStop = "${cfg.finalPackage}/bin/openhab stop";
+                  ExecStopPost = "${pkgs.coreutils}/bin/rm -f ${restartMarker}";
+                  SuccessExitStatus = "0 143";
+                  RestartSec = "5s";
+                  Restart = "on-failure";
+                  TimeoutStartSec =
+                    let
+                      dcfg = cfg.workarounds.delayRules;
+                      s = 180 + (if dcfg.enable then dcfg.delay else 0);
+                    in
+                    "${toString s}s";
+                  TimeoutStopSec = "120s";
+                  LimitNOFILE = 102642;
+                  ReadWriteDirectories = [
+                    "/run/lock"
+                    "/var/lock"
+                  ];
+                } // (if cfg.logToRamdisk then {
                 TemporaryFileSystem = "/var/log/openhab";
               } else {
                 LogsDirectory = dirName;
               });
             };
 
-            openhab-restart = mkIf cfg.workarounds.restart.scheduled.enable {
-              description = "Restart openHAB so our temperature readings work";
-              serviceConfig = {
-                Type = "oneshot";
-                ExecStart = "${pkgs.systemd}/bin/systemctl restart openhab.service";
-                PrivateNetwork = true;
-                PrivateTmp = true;
+            openhab-restart =
+              let
+                cfg' = cfg.workarounds.restart.scheduled;
+              in
+              {
+                description = "Restart openHAB";
+                reloadIfChanged = true;
+                restartIfChanged = false;
+                startAt = mkIf cfg'.enable cfg'.restartAt;
+                serviceConfig = {
+                  Type = "oneshot";
+                  PrivateNetwork = true;
+                  PrivateTmp = true;
+                  ExecStart = getExe (pkgs.resholve.writeScriptBin "openhab-restart"
+                    {
+                      interpreter = pkgs.runtimeShell;
+                      inputs = with pkgs; [ coreutils systemd ];
+                      execer = [ "cannot:${getBin pkgs.systemd}/bin/systemctl" ];
+                    }
+                    ''
+                      rm -f ${restartMarker}
+                      systemctl restart openhab.service
+                    '');
+                };
               };
-              startAt = cfg.workarounds.restart.restartAt;
-            };
 
-            # TODO: This needs to go with 21.03 as it should be upstreamed then
-            bluetooth = mkIf cfg.bluetooth.enable {
-              serviceConfig.ExecStart = [
-                ""
-                "${lib.getBin config.hardware.bluetooth.package}/libexec/bluetooth/bluetoothd -f /etc/bluetooth/main.conf --noplugin=sap"
-              ];
+            openhab-heartbeat = mkIf cfg.cloud.enable {
+              description = "Heartbeat check for myopenhab.org";
+              serviceConfig = commonServiceConfig rec {
+                Type = "oneshot";
+                ExecCondition = [
+                  "${getBin pkgs.systemd}/bin/systemctl is-active --quiet openhab.service"
+                ];
+                ExecStart = concatStringsSep " " [
+                  "${getExe pkgs.openhab.openhab-heartbeat}"
+                  "--minutes 5"
+                  "--item ${cfg.cloud.item}"
+                  "--heartbeat ${heartbeatMarker}"
+                  "--log %L/${LogsDirectory}/heartbeat.log"
+                  "--file ${restartMarker}"
+                  "--user %d/user"
+                  "--pass %d/pass"
+                  # "--verbose"
+                ];
+                LoadCredential = [
+                  "user:${cfg.cloud.user}"
+                  "pass:${cfg.cloud.pass}"
+                ];
+                LogsDirectory = "openhab";
+                SyslogIdentifier = "%N";
+                TimeoutSec = "20s";
+              };
+              startAt = "minutely";
             };
           };
 
@@ -1094,7 +1440,7 @@ in
 
       users.groups = {
         bluetooth = mkIf cfg.bluetooth.enable { };
-        openhab-keys = { };
+        openhab-tokens = { };
       };
     })
   ]);
