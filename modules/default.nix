@@ -361,7 +361,13 @@ let
       name = "wait-for-openhab";
       runtimeInputs = with pkgs; [ coreutils gnugrep iproute ];
       text = ''
-        timeout 60 ${pkgs.runtimeShell} -c \
+        if [ -d $OPENHAB_USERDATA/tmp/kar/openhab-addons-${cfg.package.version}/org/openhab/ui/bundles ]; then
+          seconds=60
+        else
+          seconds=300
+        fi
+
+        timeout $seconds ${pkgs.runtimeShell} -c \
           'while ! ss -H -t -l -n sport = :${port'} | grep -q "^LISTEN.*:${port'}"; do sleep 1; done'
       '';
     };
