@@ -10,3 +10,6 @@ openhab3:
 
 openhab4:
 	$(call BUILD,40)
+
+vm:
+	@nix build .#openhab-microvm && ./result/bin/microvm-run
