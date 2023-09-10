@@ -76,6 +76,7 @@
               services.getty.autologinUser = "root";
 
               microvm = {
+                mem = 2048;
                 volumes = [{
                   mountPoint = "/var";
                   image = "var.img";
