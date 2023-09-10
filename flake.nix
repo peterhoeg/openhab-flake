@@ -4,9 +4,11 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
     flake-utils.url = "github:numtide/flake-utils";
+    microvm.url = "github:astro/microvm.nix";
+    microvm.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, microvm }:
     let
       system = "x86_64-linux";
 
@@ -52,8 +54,61 @@
       };
 
       nixosModules.openhab = import ./modules/default.nix;
+
+      nixosConfigurations.openhab-microvm = nixpkgs.lib.nixosSystem
+        {
+          inherit pkgs system;
+          modules = [
+            self.nixosModules.openhab
+            {
+              services.openhab = {
+                enable = true;
+                configOnly = true;
+                package = pkgs.openhab.openhab34;
+              };
+              system.stateVersion = "23.05";
+
+            }
+            microvm.nixosModules.microvm
+            {
+
+              networking.hostName = "openhab-microvm";
+              users.users.root.password = "";
+              services.getty.autologinUser = "root";
+
+              microvm = {
+                volumes = [{
+                  mountPoint = "/var";
+                  image = "var.img";
+                  size = 1024;
+                }];
+                shares = [{
+                  # use "virtiofs" for MicroVMs that are started by systemd
+                  proto = "9p";
+                  tag = "ro-store";
+                  # a host's /nix/store will be picked up so that the
+                  # size of the /dev/vda can be reduced.
+                  source = "/nix/store";
+                  mountPoint = "/nix/.ro-store";
+                }];
+                socket = "control.socket";
+                # relevant for delarative MicroVM management
+                hypervisor = "qemu";
+              };
+            }
+          ];
+        };
+
     } // flake-utils.lib.eachSystem supportedSystems (system: {
-      packages = pkgs.openhab // { default = pkgs.openhab.openhab-stable; };
+      packages = pkgs.openhab // { default = pkgs.openhab.openhab-stable; } // {
+        openhab-microvm =
+          let
+            inherit (self.nixosConfigurations.openhab-microvm) config;
+            # quickly build with another hypervisor if this MicroVM is built as a package
+            hypervisor = "qemu";
+          in
+          config.microvm.runner.${hypervisor};
+      };
 
       devShells.default = pkgs.mkShell {
         nativeBuildInputs = [ ];
