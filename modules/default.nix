@@ -760,7 +760,7 @@ in
     };
 
     sitemaps = mkOption {
-      default = [ ];
+      default = { };
       description = "Sitemaps";
       type = types.attrsOf (types.submodule (import ./sitemaps.nix { inherit lib pkgs; }));
     };
