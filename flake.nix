@@ -64,6 +64,7 @@
               services.openhab = {
                 enable = true;
                 configOnly = false;
+                openFirewall = true;
               };
               system.stateVersion = "23.05";
 
@@ -94,6 +95,15 @@
                 socket = "control.socket";
                 # relevant for delarative MicroVM management
                 hypervisor = "qemu";
+                interfaces = [{
+                  id = "openhab-net";
+                  type = "user";
+                  mac = "00:00:00:00:00:01";
+                }];
+                forwardPorts = [{
+                  host.port = 8080;
+                  guest.port = 8080;
+                }];
               };
             }
           ];
