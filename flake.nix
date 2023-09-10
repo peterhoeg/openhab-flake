@@ -63,8 +63,7 @@
             {
               services.openhab = {
                 enable = true;
-                configOnly = true;
-                package = pkgs.openhab.openhab34;
+                configOnly = false;
               };
               system.stateVersion = "23.05";
 
