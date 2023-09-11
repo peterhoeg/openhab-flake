@@ -37,7 +37,7 @@
           enableemail = false;
           emailoverride = "";
           keepnr = 3;
-          flake = "gitlab:peterhoeg/openhab-flake?ref=main";
+          flake = "github:peterhoeg/openhab-flake?ref=main";
         };
       };
     in
