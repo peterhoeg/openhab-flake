@@ -1,38 +1,13 @@
 * openHAB on NixOS
 
-Use this module to run openHAB on NixOS.
+This is an *extremely* basic flake for running openHAB on NixOS.
 
-* Is it good?
+* Does it work
 
-Yes, yes it is!
+1. run =make vm=
+2. wait for a while
+3. open http://localhost:8080 in a browser
 
-* Developing your own helpers
+This is currently just bringing up openHAB - you can't really do anything with it other than going through the GUI, but we now have a team on this after the nixcon 2023 hackday, so now things are moving.
 
-If you have a canonical source of truth with all your devices, it probably makes
-sense to build a set of helpers that generate the various things and items and
-the =configOnly= option is there to assist with this. You can on your
-development machine set the following options:
-
-#+begin_src nix
-{
-  services.openhab = {
-    enable = true;
-    configOnly = true;
-  };
-}
-#+end_src
-
-This way all the various components are being built locally and available
-through =/etc/openhab= without actually running any software. This allows you to
-test your own code out locally without risking breaking things in production.
-With that option you get the =copy_openhab_config= script which will create a
-local git repository in =$HOME/oh= and copy in the new changes. This supports
-the following workflow:
-
-1. set the options outlined above
-2. run =nixos-rebuild test && copy_openhab_config=
-3. hack away on your openHAB helpers
-4. run =nixos-rebuild test && copy_openhab_config=
-5. take a look at the diff in =$HOME/oh=
-
-Keep repeat steps 3 to 5 until you manage to whip things into shape.
+We cannot recommend doing anything with this until https://github.com/peterhoeg/openhab-flake/milestone/1 is released.
