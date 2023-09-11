@@ -5,7 +5,7 @@
     "emailoverride": "",
     "enabled": 1,
     "enableemail": false,
-    "flake": "gitlab:peterhoeg/openhab-flake?ref=main",
+    "flake": "github:peterhoeg/openhab-flake?ref=main",
     "hidden": false,
     "keepnr": 3,
     "schedulingshares": 1,
