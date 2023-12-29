@@ -53,6 +53,7 @@
             openhab33 openhab33-addons
             openhab34 openhab34-addons
             openhab40 openhab40-addons
+            openhab41 openhab41-addons
             openhab-stable openhab-stable-addons
             openhab-heartbeat;
         };
