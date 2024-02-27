@@ -77,9 +77,7 @@ let
         mkdir -p $base
         cp -r * $base/
 
-        for f in $(find $base -name '*jna*.jar'); do
-          ln -s "$f" $base/runtime/lib/boot
-        done
+        find $base -name '*jna*.jar' -exec ln -s '{}' $base/runtime/lib/boot \;
 
         runHook postInstall
       '';
