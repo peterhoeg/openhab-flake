@@ -72,8 +72,14 @@ let
       installPhase = ''
         runHook preInstall
 
-        mkdir -p $out/share/openhab
-        cp -r * $out/share/openhab/
+        base=$out/share/openhab
+
+        mkdir -p $base
+        cp -r * $base/
+
+        for f in $(find $base -name '*jna*.jar'); do
+          ln -s "$f" $base/runtime/lib/boot
+        done
 
         runHook postInstall
       '';
