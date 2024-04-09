@@ -1,4 +1,4 @@
-{ stdenv
+{ stdenvNoCC
 , lib
 , fetchFromGitHub
 , fetchFromGitLab
@@ -27,7 +27,7 @@ let
     ];
 
   addon = { pname, version, hash }:
-    stdenv.mkDerivation rec {
+    stdenvNoCC.mkDerivation rec {
       inherit pname version;
 
       src = fetchurl {
@@ -41,7 +41,7 @@ let
     };
 
   generic = { version, hash }:
-    stdenv.mkDerivation rec {
+    stdenvNoCC.mkDerivation rec {
       pname = "openhab";
       inherit version;
 
@@ -213,13 +213,13 @@ rec {
   };
 
   openhab41 = generic {
-    version = "4.1.1";
-    hash = "sha256-jWs94qtXETAwVc7mcoj892Fgm/kC6XzF5YoghWtjuiA=";
+    version = "4.1.2";
+    hash = "sha256-ZTbvoUpf+MzcChKfRvKt2JEwVOoN8xlYIMymWKo/sqo=";
   };
 
   openhab41-addons = addon {
     pname = "openhab-addons";
-    hash = "sha256-C788YJRdYzefgsNDGeh/BYz/AUOKjYGWGp7DdaWUJ58=";
+    hash = "sha256-rzmuWROApyAEn5V2r/Cg5q5PBUSX2olIoS53xVJ3Po0=";
     inherit (openhab41) version;
   };
 
