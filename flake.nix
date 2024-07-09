@@ -54,6 +54,7 @@
             openhab34 openhab34-addons
             openhab40 openhab40-addons
             openhab41 openhab41-addons
+            openhab42 openhab42-addons
             openhab-stable openhab-stable-addons
             openhab-heartbeat;
         };
