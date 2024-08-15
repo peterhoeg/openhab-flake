@@ -224,13 +224,13 @@ rec {
   };
 
   openhab42 = generic {
-    version = "4.2.0";
-    hash = "sha256-kgYQvTIAiALwWDkIH/k6fkU10V3gIXXV5vE5s/dyl9M=";
+    version = "4.2.1";
+    hash = "sha256-vij3G/AcQrRpnLG0sDIJu0Q7V2wMYBwLh/JAl12yBYU=";
   };
 
   openhab42-addons = addon {
     pname = "openhab-addons";
-    hash = "sha256-Ch/abYlzfK/ujqkOC1ha805ZZBddaf1/qSPyVSiJvF4=";
+    hash = "sha256-lR8Bg+Nu62eJkiUw1obCBnFmjU7hBL0k2eNFGscYPic=";
     inherit (openhab42) version;
   };
 
