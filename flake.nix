@@ -44,21 +44,7 @@
 
     {
       overlays.default = final: prev: {
-        openhab = {
-          inherit (prev.callPackages ./packages { })
-            openhab-cloud
-            openhab2 openhab2-v1-addons openhab2-v2-addons
-            openhab31 openhab31-addons
-            openhab32 openhab32-addons
-            openhab33 openhab33-addons
-            openhab34 openhab34-addons
-            openhab40 openhab40-addons
-            openhab41 openhab41-addons
-            openhab42 openhab42-addons
-            openhab43 openhab43-addons
-            openhab-stable openhab-stable-addons
-            openhab-heartbeat;
-        };
+        openhab = prev.recurseIntoAttrs (prev.callPackages ./packages { });
       };
 
       nixosModules.openhab = import ./modules/default.nix;
