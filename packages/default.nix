@@ -1,21 +1,27 @@
-{ stdenvNoCC
-, lib
-, fetchFromGitHub
-, fetchFromGitLab
-, fetchurl
-, nodejs
-, buildNpmPackage
-, makeWrapper
-, nix-update-script
-, python3
-, crystal
-, openssl
-, zlib
-, cloudHomeDir ? "/var/lib/openhabcloud"
+{
+  stdenvNoCC,
+  lib,
+  fetchFromGitHub,
+  fetchFromGitLab,
+  fetchurl,
+  nodejs,
+  buildNpmPackage,
+  makeWrapper,
+  nix-update-script,
+  python3,
+  crystal,
+  openssl,
+  zlib,
+  cloudHomeDir ? "/var/lib/openhabcloud",
 }:
 
 let
-  urls = { pname, version, ext }:
+  urls =
+    {
+      pname,
+      version,
+      ext,
+    }:
     let
       path = "org/openhab/distro/${pname}/${version}/${pname}-${version}.${ext}";
     in
@@ -26,12 +32,20 @@ let
       "https://repo1.maven.org/maven2/${path}"
     ];
 
-  addon = { pname, version, hash }:
+  addon =
+    {
+      pname,
+      version,
+      hash,
+    }:
     stdenvNoCC.mkDerivation rec {
       inherit pname version;
 
       src = fetchurl {
-        urls = urls { inherit pname version; ext = "kar"; };
+        urls = urls {
+          inherit pname version;
+          ext = "kar";
+        };
         inherit hash;
       };
 
@@ -40,13 +54,17 @@ let
       '';
     };
 
-  generic = { version, hash }:
+  generic =
+    { version, hash }:
     stdenvNoCC.mkDerivation rec {
       pname = "openhab";
       inherit version;
 
       src = fetchurl {
-        urls = urls { inherit pname version; ext = "tar.gz"; };
+        urls = urls {
+          inherit pname version;
+          ext = "tar.gz";
+        };
         inherit hash;
       };
 
@@ -110,7 +128,10 @@ rec {
 
     npmDepsHash = "sha256-FIxbwN4Pw9E1thzr8ADi3fhEnlon+Ol7TIBFlQpgcCo=";
 
-    nativeBuildInputs = [ makeWrapper python3 ];
+    nativeBuildInputs = [
+      makeWrapper
+      python3
+    ];
 
     dontNpmBuild = true;
 
@@ -224,13 +245,13 @@ rec {
   };
 
   openhab42 = generic {
-    version = "4.2.1";
-    hash = "sha256-vij3G/AcQrRpnLG0sDIJu0Q7V2wMYBwLh/JAl12yBYU=";
+    version = "4.2.2";
+    hash = "sha256-ZUAQ0xg3SmxTtcrjDqfWpX5JrHpuElV/w+q0xOugfTk=";
   };
 
   openhab42-addons = addon {
     pname = "openhab-addons";
-    hash = "sha256-lR8Bg+Nu62eJkiUw1obCBnFmjU7hBL0k2eNFGscYPic=";
+    hash = "sha256-GYQ3ys74wQphHHU1fRwCAgHUz6vOk/3b5aA8rHMT8F0=";
     inherit (openhab42) version;
   };
 
@@ -262,7 +283,10 @@ rec {
       hash = "sha256-9EMXl1OlgxPuZMjABjZ2bND1uzlYo9gpfPrNgfw/RYg=";
     };
 
-    buildInputs = [ openssl zlib ];
+    buildInputs = [
+      openssl
+      zlib
+    ];
 
     doCheck = false;
 
