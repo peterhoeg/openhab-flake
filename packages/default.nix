@@ -256,18 +256,18 @@ rec {
   };
 
   openhab43 = generic {
-    version = "4.3.0.M1";
-    hash = "sha256-YNmPx5aZVGCpzD789fkmov9wBHHP4x+rv3+aOdfYK2M=";
+    version = "4.3.0";
+    hash = "sha256-Go5OxYU2roQS+xZ2B3OAMw/kgncVqpW85zWAE/r9pjI=";
   };
 
   openhab43-addons = addon {
     pname = "openhab-addons";
-    hash = "sha256-FbzeExp8pCgdo6MkYIiBleMhfzIWunnt/cYZ8arLzkc=";
+    hash = "sha256-qm63x9X0b/DS/WBVcu2xaFTc+DpDsUuXSak8FGiIXt8=";
     inherit (openhab43) version;
   };
 
-  openhab-stable = openhab42;
-  openhab-stable-addons = openhab42-addons;
+  openhab-stable = openhab43;
+  openhab-stable-addons = openhab43-addons;
 
   openhab-heartbeat = crystal.buildCrystalPackage rec {
     pname = "openhab-heartbeat";
