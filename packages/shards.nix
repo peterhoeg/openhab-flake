@@ -1,8 +1,8 @@
 {
   crest = {
     url = "https://github.com/mamantoha/crest.git";
-    rev = "v1.3.8";
-    sha256 = "19j6l7d3hd33jp6p4lggkpmyfml0i0hcykij0w4wjf6rw3y70aab";
+    rev = "v1.5.1";
+    sha256 = "0pidf2xwk627wskfg5rld5h2v386fk7nlgb9r2ikihcm250m577c";
   };
   http-client-digest_auth = {
     url = "https://github.com/mamantoha/http-client-digest_auth.git";
@@ -11,7 +11,7 @@
   };
   http_proxy = {
     url = "https://github.com/mamantoha/http_proxy.git";
-    rev = "v0.9.0";
-    sha256 = "1yq16h9hlayc641562498jld6lc1hf82sxfnyl5d6jjrnpznl8ky";
+    rev = "v0.13.0";
+    sha256 = "0crhf3szw6n03x0qf4zqilrizk3q7v31bckgfqrmhjmrjhl1sz8w";
   };
 }

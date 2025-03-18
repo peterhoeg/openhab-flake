@@ -271,7 +271,7 @@ rec {
 
   openhab-heartbeat = crystal.buildCrystalPackage rec {
     pname = "openhab-heartbeat";
-    version = "0.1.1";
+    version = "0.1.2";
 
     format = "shards";
     shardsFile = ./shards.nix;
@@ -280,7 +280,7 @@ rec {
       owner = "peterhoeg";
       repo = "openhab-heartbeat";
       rev = "v" + version;
-      hash = "sha256-9EMXl1OlgxPuZMjABjZ2bND1uzlYo9gpfPrNgfw/RYg=";
+      hash = "sha256-/Ci2RMNakJOjlP0zvPAWIIH96mijFfLMCEpxppMI9IY=";
     };
 
     buildInputs = [
