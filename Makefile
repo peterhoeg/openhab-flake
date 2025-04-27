@@ -8,6 +8,9 @@ all: cloud openhab2 openhab3 openhab4
 cloud:
 	@nix build .\#openhab-cloud
 
+heartbeat:
+	@nix build .\#openhab-heartbeat
+
 openhab2:
 	@nix build .\#openhab2 .\#openhab2-v1-addons .\#openhab2-v2-addons
 
