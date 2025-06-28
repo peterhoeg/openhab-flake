@@ -266,6 +266,17 @@ rec {
     inherit (openhab43) version;
   };
 
+  openhab50 = generic {
+    version = "5.0.0.M3";
+    hash = "sha256-YSaep8Q8ob7kg7XRZw4JPUj+HY2ripuREmM4/iuub9M=";
+  };
+
+  openhab50-addons = addon {
+    pname = "openhab-addons";
+    hash = "sha256-2NSARs09w+qoDiXYxsRah5I4buzba0z7o8tofHpe6E0=";
+    inherit (openhab50) version;
+  };
+
   openhab-stable = openhab43;
   openhab-stable-addons = openhab43-addons;
 
