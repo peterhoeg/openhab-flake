@@ -34,11 +34,11 @@ let
 
   addon =
     {
-      pname,
+      pname ? "openhab-addons",
       version,
       hash,
     }:
-    stdenvNoCC.mkDerivation rec {
+    stdenvNoCC.mkDerivation (finalAttrs: {
       inherit pname version;
 
       src = fetchurl {
@@ -50,9 +50,9 @@ let
       };
 
       buildCommand = ''
-        install -Dm444 $src $out/share/openhab/addons/${src.name}
+        install -Dm444 $src $out/share/openhab/addons/${finalAttrs.finalPackage.src.name}
       '';
-    };
+    });
 
   generic =
     { version, hash }:
@@ -171,7 +171,6 @@ rec {
   };
 
   openhab2-v2-addons = addon {
-    pname = "openhab-addons";
     hash = "sha256-ZUSjI68R9Xfd5zb2lCxYM4edC0F3BwD8xmehiHVcbM4=";
     inherit (openhab2) version;
   };
@@ -184,7 +183,6 @@ rec {
   };
 
   openhab31-addons = addon {
-    pname = "openhab-addons";
     hash = "sha256-5c9a3MnHJBnTY69Rpkg+TvpxHgwHGmoOz/UoV7/pqPo=";
     inherit (openhab31) version;
   };
@@ -195,7 +193,6 @@ rec {
   };
 
   openhab32-addons = addon {
-    pname = "openhab-addons";
     hash = "sha256-VD07+m3Okh+5/PuXEFhG2kqi1crNrWvpEKNAxcMAB6w=";
     inherit (openhab32) version;
   };
@@ -206,7 +203,6 @@ rec {
   };
 
   openhab33-addons = addon {
-    pname = "openhab-addons";
     hash = "sha256-tUH5+/0XrNsK4AZPdTphTLGowK7NJW0aX3rBCPfssD4=";
     inherit (openhab33) version;
   };
@@ -217,7 +213,6 @@ rec {
   };
 
   openhab34-addons = addon {
-    pname = "openhab-addons";
     hash = "sha256-Rr9G4aA8Le51Vcyewl020kiF2CO09b++TLeESvDtZ90=";
     inherit (openhab34) version;
   };
@@ -228,7 +223,6 @@ rec {
   };
 
   openhab40-addons = addon {
-    pname = "openhab-addons";
     hash = "sha256-z1txN3nN5CMNM5BCA8YL8fynyKIcrX1OQWt5SbIgBVo=";
     inherit (openhab40) version;
   };
@@ -239,7 +233,6 @@ rec {
   };
 
   openhab41-addons = addon {
-    pname = "openhab-addons";
     hash = "sha256-M15OZBwJ/LqTTZSSiWjtb9kCApFi4E1qQndJG8RUttA=";
     inherit (openhab41) version;
   };
@@ -250,7 +243,6 @@ rec {
   };
 
   openhab42-addons = addon {
-    pname = "openhab-addons";
     hash = "sha256-ndbIaZcKbuOW3Y0Ypno4ckSRIv25pCSzvhc6zirLRTY=";
     inherit (openhab42) version;
   };
@@ -261,19 +253,17 @@ rec {
   };
 
   openhab43-addons = addon {
-    pname = "openhab-addons";
     hash = "sha256-v87qvrTY1xLLKlMJEiXntt5YKbAaLoQsKEfDSbO+nRM=";
     inherit (openhab43) version;
   };
 
   openhab50 = generic {
-    version = "5.0.0.M3";
-    hash = "sha256-YSaep8Q8ob7kg7XRZw4JPUj+HY2ripuREmM4/iuub9M=";
+    version = "5.0.0";
+    hash = "sha256-bRtKBhf4A49X0X8W01h991udOQJE3ahB2dj/Zf5IyOk=";
   };
 
   openhab50-addons = addon {
-    pname = "openhab-addons";
-    hash = "sha256-2NSARs09w+qoDiXYxsRah5I4buzba0z7o8tofHpe6E0=";
+    hash = "sha256-dyyUU8TeyT1DVa4LdXaeswu/t/W9YGOhiVMUqUh6kqM=";
     inherit (openhab50) version;
   };
 
@@ -283,7 +273,6 @@ rec {
   openhab-heartbeat = crystal.buildCrystalPackage rec {
     pname = "openhab-heartbeat";
     version = "0.1.4";
-    # inherit (lib.importJSON ./version.json) version;
 
     format = "shards";
     shardsFile = ./shards.nix;
