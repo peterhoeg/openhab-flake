@@ -1,6 +1,6 @@
 ARGS := "--keep-going --no-keep-outputs --print-out-paths"
 
-# BUILD = @nix build .\#openhab$(1) .\#openhab$(1)-addons $(ARGS)
+alias openhab := build
 
 [private]
 @_build targets:
@@ -9,6 +9,11 @@ ARGS := "--keep-going --no-keep-outputs --print-out-paths"
 [private]
 @_openhab version:
     nix build {{ ARGS }} .#openhab{{ version }} .#openhab{{ version }}-addons
+
+# list all targets
+[default]
+@list:
+    just --justfile {{ justfile() }} --list --list-submodules
 
 # all targets
 all: cloud openhab2 openhab3 openhab4
@@ -28,9 +33,11 @@ openhab3: (_openhab "34")
 # build openHAB 4.3.x
 openhab4: (_openhab "43")
 
-# build openHAB 5.0.x
-[default]
-openhab5: (_openhab "50")
+# build openHAB 5.1.x
+openhab5: (_openhab "51")
+
+# build openHAB
+build: openhab5
 
 # Build and run a VM
 @vm: (_build ".#openhab-microvm")
