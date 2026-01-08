@@ -268,12 +268,12 @@ rec {
   };
 
   openhab51 = generic {
-    version = "5.1.0";
-    hash = "sha256-KeBE4qzqVYb7vJ9pHcGGuP+wm75GCH67Iia2Eq7eBEE=";
+    version = "5.1.1";
+    hash = "sha256-RMxWdiDgkp1BlTE4/6GIB+E5BBeIbP7fv2ucRQkmqzg=";
   };
 
   openhab51-addons = addon {
-    hash = "sha256-m+fsOFGG8UlNSrQrJ0TqpeTxqbTlNQkxbUGUdivGrVk=";
+    hash = "sha256-HFAE8Gpls9VYtvVCNbj4tXeUhP/RQVZyBBzWU9zVw7M=";
     inherit (openhab51) version;
   };
 
