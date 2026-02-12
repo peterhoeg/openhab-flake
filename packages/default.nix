@@ -277,8 +277,8 @@ rec {
     inherit (openhab51) version;
   };
 
-  openhab-stable = openhab43;
-  openhab-stable-addons = openhab43-addons;
+  openhab-stable = openhab51;
+  openhab-stable-addons = openhab51-addons;
 
   openhab-heartbeat = crystal.buildCrystalPackage rec {
     pname = "openhab-heartbeat";

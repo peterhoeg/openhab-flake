@@ -359,7 +359,7 @@ let
     in
     pkgs.writeShellApplication {
       name = "wait-for-openhab";
-      runtimeInputs = with pkgs; [ coreutils gnugrep iproute ];
+      runtimeInputs = with pkgs; [ coreutils gnugrep iproute2 ];
       text = ''
         # openhab does a lot of work during first launch, so we need to wait longer for it to become available
         if [ -d "$OPENHAB_USERDATA"/tmp/kar/openhab-addons-${cfg.package.version}/org/openhab/ui/bundles ]; then
