@@ -50,7 +50,7 @@
 
     {
       overlays.default = final: prev: {
-        openhab = prev.recurseIntoAttrs (prev.callPackages ./packages { });
+        openhab = lib.recurseIntoAttrs (prev.callPackages ./packages { });
       };
 
       nixosModules.openhab = import ./modules/default.nix;

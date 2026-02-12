@@ -16,7 +16,7 @@ alias openhab := build
     just --justfile {{ justfile() }} --list --list-submodules
 
 # all targets
-all: cloud openhab2 openhab3 openhab4
+all: cloud openhab2 openhab3 openhab4 openhab5
 
 # build openHAB-cloud
 @cloud: (_build ".#openhab-cloud")
@@ -38,6 +38,8 @@ openhab5: (_openhab "51")
 
 # build openHAB
 build: openhab5
+
+alias b := build
 
 # Build and run a VM
 @vm: (_build ".#openhab-microvm")

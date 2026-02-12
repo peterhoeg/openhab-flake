@@ -100,11 +100,11 @@ let
         runHook postInstall
       '';
 
-      meta = with lib; {
+      meta = {
         description = "OpenHAB - vendor and technology agnostic open source home automation software";
         homepage = "https://www.openhab.org";
-        license = licenses.epl10;
-        maintainers = with maintainers; [ peterhoeg ];
+        license = lib.licenses.epl10;
+        maintainers = with lib.maintainers; [ peterhoeg ];
       };
     };
 
@@ -150,12 +150,12 @@ rec {
       updateScript = nix-update-script { };
     };
 
-    meta = with lib; {
+    meta = {
       description = "openHAB cloud component";
       homepage = "https://openhab.org";
-      license = licenses.epl10;
-      maintainers = with maintainers; [ peterhoeg ];
-      platforms = platforms.unix;
+      license = lib.licenses.epl10;
+      maintainers = with lib.maintainers; [ peterhoeg ];
+      platforms = lib.platforms.unix;
     };
   };
 
@@ -268,12 +268,12 @@ rec {
   };
 
   openhab51 = generic {
-    version = "5.1.1";
-    hash = "sha256-RMxWdiDgkp1BlTE4/6GIB+E5BBeIbP7fv2ucRQkmqzg=";
+    version = "5.1.2";
+    hash = "sha256-FeN6O33Av9cHeEgBD+9Npbaxm7sQdVK4qhnnMH3e2Ak=";
   };
 
   openhab51-addons = addon {
-    hash = "sha256-HFAE8Gpls9VYtvVCNbj4tXeUhP/RQVZyBBzWU9zVw7M=";
+    hash = "sha256-AM9NFWhKtSKQxLJvvMIs9LD+wVYTeFueLm47F6kvwUc=";
     inherit (openhab51) version;
   };
 
@@ -305,10 +305,10 @@ rec {
       strip $out/bin/*
     '';
 
-    meta = with lib; {
+    meta = {
       description = "openHAB Cloud Connector heartbeat";
-      license = licenses.gpl3Only;
-      maintainers = with maintainers; [ peterhoeg ];
+      license = lib.licenses.gpl3Only;
+      maintainers = with lib.maintainers; [ peterhoeg ];
       mainProgram = "heartbeat";
     };
   };
