@@ -10,6 +10,8 @@ let
 
   inherit (lib.versions) majorMinor;
 
+  inherit (lib.openhab or (import ../lib)) foo;
+
   inherit (import ../lib/helpers.nix { inherit config lib pkgs; })
     attrsToItem attrsToThing
     attrsToFile attrsToPlainFile

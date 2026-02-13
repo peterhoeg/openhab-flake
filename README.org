@@ -11,3 +11,34 @@ This is an *extremely* basic flake for running openHAB on NixOS.
 This is currently just bringing up openHAB - you can't really do anything with it other than going through the GUI, but we now have a team on this after the nixcon 2023 hackday, so now things are moving.
 
 We cannot recommend doing anything with this until https://github.com/peterhoeg/openhab-flake/milestone/1 is released.
+
+* Using the NixOS module
+
+Add this flake as an input and import the NixOS module. To make =lib.openhab= available to all modules (including this one), pass an extended =lib= to =nixosSystem=:
+
+#+begin_src nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    openhab.url = "github:peterhoeg/openhab-flake";
+  };
+
+  outputs = { nixpkgs, openhab, ... }: {
+    nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
+      lib = nixpkgs.lib.extend (final: prev: {
+        inherit (openhab.lib) openhab;
+      });
+      system = "x86_64-linux";
+      modules = [
+        openhab.nixosModules.openhab
+        {
+          nixpkgs.overlays = [ openhab.overlays.default ];
+          services.openhab.enable = true;
+        }
+      ];
+    };
+  };
+}
+#+end_src
+
+This makes =lib.openhab.*= functions available throughout the NixOS evaluation. If you skip the =lib= argument, the module will fall back to importing its own copy of the library.

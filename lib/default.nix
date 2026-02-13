@@ -1,0 +1,3 @@
+{
+  foo = text: "foo ${text}";
+}

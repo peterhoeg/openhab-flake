@@ -26,6 +26,8 @@
           lib = nixpkgs.lib.extend (final: prev: { openhab = import ./lib; });
         in
         {
+          lib.openhab = import ./lib;
+
           overlays.default = final: prev: {
             openhab = lib.recurseIntoAttrs (prev.callPackages ./packages { });
           };
@@ -33,6 +35,7 @@
           nixosModules.openhab = import ./modules/default.nix;
 
           nixosConfigurations.openhab-microvm = nixpkgs.lib.nixosSystem {
+            inherit lib;
             system = "x86_64-linux";
             pkgs = import nixpkgs {
               system = "x86_64-linux";
