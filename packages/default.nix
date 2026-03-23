@@ -279,37 +279,4 @@ rec {
 
   openhab-stable = openhab51;
   openhab-stable-addons = openhab51-addons;
-
-  openhab-heartbeat = crystal.buildCrystalPackage rec {
-    pname = "openhab-heartbeat";
-    version = "0.1.4";
-
-    format = "shards";
-    shardsFile = ./shards.nix;
-
-    src = fetchFromGitLab {
-      owner = "peterhoeg";
-      repo = "openhab-heartbeat";
-      rev = "v" + version;
-      hash = "sha256-fW8/Pi5b6cY/gx6kov/TViRsF8A3MB/WRNgrTIecl5U=";
-    };
-
-    buildInputs = [
-      openssl
-      zlib
-    ];
-
-    doCheck = false;
-
-    postFixup = ''
-      strip $out/bin/*
-    '';
-
-    meta = {
-      description = "openHAB Cloud Connector heartbeat";
-      license = lib.licenses.gpl3Only;
-      maintainers = with lib.maintainers; [ peterhoeg ];
-      mainProgram = "heartbeat";
-    };
-  };
 }
