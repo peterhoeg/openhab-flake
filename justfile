@@ -33,8 +33,8 @@ openhab3: (_openhab "34")
 # build openHAB 4.3.x
 openhab4: (_openhab "43")
 
-# build openHAB 5.1.x
-openhab5: (_openhab "51")
+# build openHAB 5.2.x
+openhab5: (_openhab "52")
 
 # build openHAB
 build: openhab5
