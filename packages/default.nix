@@ -112,13 +112,13 @@ in
 rec {
   openhab-cloud = buildNpmPackage rec {
     pname = "openhab-cloud";
-    version = "1.0.16";
+    version = "2.0.12";
 
     src = fetchFromGitHub {
       owner = "openhab";
-      repo = pname;
+      repo = "openhab-cloud";
       rev = "v" + version;
-      hash = "sha256-Oe7U0h0ym9KYOtqJTKA35nnqZob+iL8J7UcJV2K7YRQ=";
+      hash = "sha256-CuatUS3/ktdwmsFTapdcelXSoqisQH7wx5v7WOszW8s=";
     };
 
     postPatch = ''
@@ -126,7 +126,7 @@ rec {
         sed -i -e "s@require('./config.json')@require('${cloudHomeDir}/config.json')@" {} \;
     '';
 
-    npmDepsHash = "sha256-FIxbwN4Pw9E1thzr8ADi3fhEnlon+Ol7TIBFlQpgcCo=";
+    npmDepsHash = "sha256-4+MJfTUACDAVJ6Xt3dTEn3uglT59tXPVOPwqiIgB3jE=";
 
     nativeBuildInputs = [
       makeWrapper
@@ -156,6 +156,7 @@ rec {
       license = lib.licenses.epl10;
       maintainers = with lib.maintainers; [ peterhoeg ];
       platforms = lib.platforms.unix;
+      mainProgram = "openhabcloud";
     };
   };
 
