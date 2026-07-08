@@ -51,7 +51,11 @@ let
     });
 
   generic =
-    { version, hash }:
+    {
+      version,
+      hash,
+      openhabScriptVersionConstraints ? null,
+    }:
     stdenvNoCC.mkDerivation rec {
       pname = "openhab";
       inherit version;
@@ -95,6 +99,10 @@ let
 
         runHook postInstall
       '';
+
+      passthru = lib.optionalAttrs (openhabScriptVersionConstraints != null) {
+        inherit openhabScriptVersionConstraints;
+      };
 
       meta = {
         description = "OpenHAB - vendor and technology agnostic open source home automation software";
@@ -217,6 +225,7 @@ rec {
   openhab40 = generic {
     version = "4.0.4";
     hash = "sha256-ce/9n9uOZO5Io64wyPQTKhHIFF6D78VptxBJZ9WmDIs=";
+    openhabScriptVersionConstraints = ">=5.0.0;<5.36"; # floor best-effort; 5.36 dropped OH 4.0
   };
 
   openhab40-addons = addon {
@@ -227,6 +236,7 @@ rec {
   openhab41 = generic {
     version = "4.1.3";
     hash = "sha256-CGzmEYSutFNG5jYX8RptJZNkXEnHGlk1fOXZzc6cNIQ=";
+    openhabScriptVersionConstraints = ">=5.0.0;<5.46"; # floor best-effort; 5.46 needs OH >=5.0
   };
 
   openhab41-addons = addon {
@@ -237,6 +247,7 @@ rec {
   openhab42 = generic {
     version = "4.2.3";
     hash = "sha256-6v3+3dCn2uPQZXIOOGx1ZlkDGBYMtbQ03S0Ji3oP7dY=";
+    openhabScriptVersionConstraints = ">=5.19.0;<5.46"; # floor documented; 5.46 needs OH >=5.0
   };
 
   openhab42-addons = addon {
@@ -247,6 +258,7 @@ rec {
   openhab43 = generic {
     version = "4.3.6";
     hash = "sha256-hXm0kHvUsqpkNSkoCOIOqfK+7cTYrAFnw4DbIVqTKfI=";
+    openhabScriptVersionConstraints = ">=5.27.0;<5.46"; # floor documented; 5.46 needs OH >=5.0
   };
 
   openhab43-addons = addon {
@@ -257,6 +269,7 @@ rec {
   openhab50 = generic {
     version = "5.0.3";
     hash = "sha256-x1FX1KQS9v3CiSTe5WIkTnKOosUbdahsNi8cWtxi/PE=";
+    openhabScriptVersionConstraints = ">=5.38.3;<6"; # floor best-effort
   };
 
   openhab50-addons = addon {
@@ -267,6 +280,7 @@ rec {
   openhab51 = generic {
     version = "5.1.4";
     hash = "sha256-ov4HqcTvdogKLxdIKM+cYPbu6+OQrT8FyJ5ArEVM5GM=";
+    openhabScriptVersionConstraints = ">=5.38.3;<6"; # floor best-effort (= 5.0)
   };
 
   openhab51-addons = addon {
@@ -277,6 +291,7 @@ rec {
   openhab52 = generic {
     version = "5.2.0";
     hash = "sha256-q0dxiD/HEG9Uvp71aZDPr2kWplPMlqwZTCC5p324W9I=";
+    openhabScriptVersionConstraints = ">=5.47.3;<6"; # floor documented
   };
 
   openhab52-addons = addon {
