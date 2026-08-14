@@ -289,13 +289,13 @@ rec {
   };
 
   openhab52 = generic {
-    version = "5.2.0";
-    hash = "sha256-q0dxiD/HEG9Uvp71aZDPr2kWplPMlqwZTCC5p324W9I=";
+    version = "5.2.1";
+    hash = "sha256-3Yp5uf2yVZdjbrKnMqBMdHk5XNptd8INmSiA/tGa2nY=";
     openhabScriptVersionConstraints = ">=5.47.3;<6"; # floor documented
   };
 
   openhab52-addons = addon {
-    hash = "sha256-bmbIRvWX+QBfqNoFUSxpuFi3TfbSFRxTnpoOVvzx4+s=";
+    hash = "sha256-Tx0CZ3EtMtTd5EuyoS2Q6060RRcQnI2KkPmnlrTYY0E=";
     inherit (openhab52) version;
   };
 
